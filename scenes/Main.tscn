@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://c6v3d3ot2wfht"]
+
+[ext_resource type="Script" uid="uid://dvjdlv5jfv00e" path="res://scenes/Main.cs" id="1_elqb8"]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_elqb8"]
+size = Vector2(64, 64)
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_elqb8")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(0, 5.96046e-08)
+scale = Vector2(1.25, 0.953125)
+texture = SubResource("PlaceholderTexture2D_elqb8")
+centered = false
