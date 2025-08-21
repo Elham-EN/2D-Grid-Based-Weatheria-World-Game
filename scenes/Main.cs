@@ -2,57 +2,88 @@ using Godot;
 
 namespace Game;
 
-// What This Game Does
-// This creates a cursor that snaps to a grid - like in 
-// strategy games where you select tiles or place buildings.
-// This is the foundation for a grid-based strategy or building game - similar to:
-// Tower defense games (like Plants vs. Zombies)
+// GAME OVERVIEW:
+// This creates a grid-based building placement system - like tower defense games
+// Player moves mouse -> cursor snaps to grid -> click to place buildings
+// Core mechanics: cursor tracking + building placement + grid alignment
 
 public partial class Main : Node2D
 {
-    // Reference our visual cursor
+    // GAME OBJECTS WE NEED TO CONTROL:
+    // Visual cursor that shows where we'll place buildings
     private Sprite2D sprite;
-    // Perfect for initialization code that should run once
-    // Set up initial values, connect signals, or prepare your object
+    // Template/blueprint for creating new buildings
+    private PackedScene buildingScene;
+
+    // INITIALIZATION: Set up everything before the game starts
     public override void _Ready()
     {
-        // When the game starts, search through the scene tree to find a 
-        // specific node named "Cursor" in our scene and connect it to our code.
-        // Returns a reference to that node so you can use it
+        // Load our building template from the file system
+        // This is like loading a "cookie cutter" that we can use to make identical buildings
+        buildingScene = GD.Load<PackedScene>("res://scenes/building/Building.tscn");
+        // Find and connect to our cursor (node) sprite in the scene from scene tree 
+        // Now our code can control where the cursor appears on screen
         sprite = GetNode<Sprite2D>("Cursor");
     }
 
-    // Every Frame Updates: We want the cursor to follow the mouse constantly, 
-    // so we check every frame.
+    // INPUT HANDLING: Detect when player wants to place a building
+    public override void _UnhandledInput(InputEvent evt)
+    {
+        // Listen for left mouse clicks
+        // When player clicks, they want to place a building at the cursor location
+        if (evt.IsActionPressed("left_click"))
+        {
+            PlaceBuildingAtMousePosition();
+        }
+    }
+
+    // CONTINUOUS UPDATES: Keep cursor aligned to grid every frame (60 times per second)
     public override void _Process(double delta)
     {
-        // How to get the grid cell that the mouse is currently over?
+        // Step 1: Figure out which grid cell the mouse is currently over
+        var gridPosition = GetMouseGridCellPosition();
+        // Step 2: Move our visual cursor to that exact grid cell
+        // This creates the "snapping" effect - cursor jumps from cell to cell
+        // Math: Convert grid coordinates back to pixel coordinates (multiply by cell size)
+        sprite.GlobalPosition = gridPosition * 64;
+    }
 
-        // 1.First get the mouse position in the world. This method
-        // return a vector that contain X & Y Position Vector2(250, 180)
-        // Gets the exact pixel coordinates where the mouse cursor is located
+    // MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
+    private Vector2 GetMouseGridCellPosition()
+    {
+        // Step 1: Get exact mouse position in pixels (like 250, 180)
+        // This tells us where the mouse cursor is in the game world
         var mousePosition = GetGlobalMousePosition();
-        // Convert to Grid Space:
-        // 2.Take the pixel position and divide by 64 to convert it to grid 
-        // coordinates.
+        // Step 2: Convert pixels to grid coordinates
+        // Divide by 64 because each grid cell is 64x64 pixels
         // Our world is divided into 64×64 pixel squares. This math tells us 
         // "which grid square is the mouse in?" For example, pixel (250, 180) 
         // becomes grid (3.9, 2.8).
         var gridPosition = mousePosition / 64;
         // Snap to Whole Grid Numbers: (3.9, 2.8) becomes (3, 2)
-        // Rounds DOWN to the nearest whole number
-        // We don't want partial grid positions. The cursor should be in grid 
-        // cell (3, 2), not floating between cells.
+        // Floor() rounds down: (3.9, 2.8) becomes (3, 2)
+        // This ensures we always select a complete grid cell, not a partial one
         gridPosition = gridPosition.Floor();
-        // Move Cursor(Sprite2D) to Grid Position:
-        // Convert grid coordinates back to pixels and move our cursor sprite there
-        //  Now that we know which grid cell the mouse is over, we move our cursor 
-        // sprite to the exact center of that grid cell. Grid (3, 2) becomes 
-        // pixel (192, 128).
-        sprite.GlobalPosition = gridPosition * 64;
+        return gridPosition;
+    }
+    // BUILDING PLACEMENT: Create a new building at the mouse position
+    // Result: Building appears exactly where the cursor was showing it 
+    // would be placed
+    private void PlaceBuildingAtMousePosition()
+    {
+        // Step 1: Create a new building from our template
+        // This is like using a cookie cutter to make a new cookie
+        var building = buildingScene.Instantiate<Node2D>();
+        // Step 2: Add the building to our game world
+        // Now it exists in the scene and will be drawn on screen
+        AddChild(building);
+        // Step 3: Position the building at the correct grid cell
+        // Get current mouse grid position and convert to pixel coordinates
+        var gridPosition = GetMouseGridCellPosition();
+        building.GlobalPosition = gridPosition * 64;
     }
 }
 
-// Now we have:
-// A cursor that follows your mouse
-// The cursor snaps perfectly to a grid system
+
+
+
