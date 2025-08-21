@@ -13,3 +13,10 @@ position = Vector2(0, 5.96046e-08)
 scale = Vector2(1.25, 0.953125)
 texture = SubResource("PlaceholderTexture2D_elqb8")
 centered = false
+
+[node name="PlaceBuildingButton" type="Button" parent="."]
+offset_left = 6.0
+offset_top = 683.0
+offset_right = 123.0
+offset_bottom = 714.0
+text = "Place Building"

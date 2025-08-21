@@ -11,9 +11,10 @@ public partial class Main : Node2D
 {
     // GAME OBJECTS WE NEED TO CONTROL:
     // Visual cursor that shows where we'll place buildings
-    private Sprite2D sprite;
+    private Sprite2D cursor;
     // Template/blueprint for creating new buildings
     private PackedScene buildingScene;
+    private Button placeBuildingButton;
 
     // INITIALIZATION: Set up everything before the game starts
     public override void _Ready()
@@ -23,7 +24,12 @@ public partial class Main : Node2D
         buildingScene = GD.Load<PackedScene>("res://scenes/building/Building.tscn");
         // Find and connect to our cursor (node) sprite in the scene from scene tree 
         // Now our code can control where the cursor appears on screen
-        sprite = GetNode<Sprite2D>("Cursor");
+        cursor = GetNode<Sprite2D>("Cursor");
+        placeBuildingButton = GetNode<Button>("PlaceBuildingButton");
+
+        cursor.Visible = false;
+
+        placeBuildingButton.Pressed += OnButtonPressed;
     }
 
     // INPUT HANDLING: Detect when player wants to place a building
@@ -31,9 +37,10 @@ public partial class Main : Node2D
     {
         // Listen for left mouse clicks
         // When player clicks, they want to place a building at the cursor location
-        if (evt.IsActionPressed("left_click"))
+        if (cursor.Visible && evt.IsActionPressed("left_click"))
         {
             PlaceBuildingAtMousePosition();
+            cursor.Visible = false;
         }
     }
 
@@ -45,7 +52,7 @@ public partial class Main : Node2D
         // Step 2: Move our visual cursor to that exact grid cell
         // This creates the "snapping" effect - cursor jumps from cell to cell
         // Math: Convert grid coordinates back to pixel coordinates (multiply by cell size)
-        sprite.GlobalPosition = gridPosition * 64;
+        cursor.GlobalPosition = gridPosition * 64;
     }
 
     // MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
@@ -81,6 +88,11 @@ public partial class Main : Node2D
         // Get current mouse grid position and convert to pixel coordinates
         var gridPosition = GetMouseGridCellPosition();
         building.GlobalPosition = gridPosition * 64;
+    }
+
+    public void OnButtonPressed()
+    {
+        cursor.Visible = true;
     }
 }
 
