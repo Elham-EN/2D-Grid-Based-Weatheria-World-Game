@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 
 namespace Game;
@@ -11,13 +12,13 @@ public partial class Main : Node2D
 {
     // GAME OBJECTS WE NEED TO CONTROL:
 
-    // The primary placement cursor - a visual indicator that shows exactly where a building 
-    // will be placed. This sprite follows the mouse but snaps to grid boundaries to maintain 
-    // visual consistency
+    // The primary placement cursor - a visual indicator that shows exactly where 
+    // a building will be placed. This sprite follows the mouse but snaps to grid 
+    // boundaries to maintain visual consistency
     private Sprite2D cursor;
-    // A template/blueprint for building objects that serves as our factory pattern implementation. 
-    // This scene file contains all the components a building needs (sprite, collision, scripts) 
-    // pre-configured and ready for instantiation
+    // A template/blueprint for building objects that serves as our factory pattern 
+    // implementation. This scene file contains all the components a building needs 
+    // (sprite, collision, scripts) pre-configured and ready for instantiation
     private PackedScene buildingScene;
     // The user interface element that initiates placement mode.
     private Button placeBuildingButton;
@@ -30,6 +31,8 @@ public partial class Main : Node2D
     // Tracks which grid cell the mouse is currently positioned over.
     // Null indicate that there is no currently hovered grid cell
     private Vector2? hoveredGridCell;
+    // To mark occupied cells (cannat have duplicate element, must be unique)
+    private HashSet<Vector2> occupiedCells = new HashSet<Vector2>();
 
 
     // INITIALIZATION: Set up everything before the game starts
@@ -62,9 +65,11 @@ public partial class Main : Node2D
     // responds to mouse click events when certain conditions are met.
     public override void _UnhandledInput(InputEvent evt)
     {
-        // CONDITIONAL PLACEMENT EXECUTION: We only process click events when the
-        // system is currently in placement mode (indicated by cursor visibility)
-        if (cursor.Visible && evt.IsActionPressed("left_click"))
+        // CONDITIONAL PLACEMENT EXECUTION: We only process click events when the system 
+        // is currently in placement mode (indicated by cursor visibility) and check if 
+        // that cell is not occupied yet. This prevent buildng being on top of each other
+        if (cursor.Visible && evt.IsActionPressed("left_click")
+            && !occupiedCells.Contains(GetMouseGridCellPosition()))
         {
             // BUILDING INSTANTIATION AND PLACEMENT: Execute the core placement logic
             // that creates a new building at the current cursor position
@@ -121,6 +126,7 @@ public partial class Main : Node2D
         AddChild(building);
         var gridPosition = GetMouseGridCellPosition();
         building.GlobalPosition = gridPosition * 64;
+        occupiedCells.Add(gridPosition);
         // STATE CLEANUP: Clear the hover tracking state and update the
         // visual highlights to reflect that placement mode is ending. This prevents
         // the range preview from persisting after placement is complete
