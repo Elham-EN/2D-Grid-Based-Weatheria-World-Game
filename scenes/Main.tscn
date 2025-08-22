@@ -14,14 +14,12 @@ modulate = Color(1, 1, 1, 0.470588)
 tile_set = ExtResource("2_rvslj")
 
 [node name="Cursor" type="Sprite2D" parent="."]
-position = Vector2(0, 5.96046e-08)
-scale = Vector2(1.25, 0.953125)
 texture = SubResource("PlaceholderTexture2D_rvslj")
 centered = false
 
 [node name="PlaceBuildingButton" type="Button" parent="."]
-offset_left = 6.0
-offset_top = 683.0
-offset_right = 123.0
-offset_bottom = 714.0
+offset_left = 10.0
+offset_top = 665.0
+offset_right = 127.0
+offset_bottom = 696.0
 text = "Place Building"
