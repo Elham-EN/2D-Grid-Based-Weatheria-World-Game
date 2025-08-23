@@ -12,15 +12,18 @@ public partial class Main : Node
 {
 	// GAME OBJECTS WE NEED TO CONTROL:
 	private Sprite2D cursor;
+	
 	// A template/blueprint for building objects that serves as our factory pattern 
 	// implementation.
 	private PackedScene buildingScene;
+	
 	// The user interface element that initiates placement mode.
 	private Button placeBuildingButton;
  
 	private TileMapLayer highlightTileMapLayer;
 
 	private Vector2? hoveredGridCell;
+	
 	// To mark occupied cells (cannat have duplicate element, must be unique)
 	private HashSet<Vector2> occupiedCells = new HashSet<Vector2>();
 
@@ -31,7 +34,9 @@ public partial class Main : Node
 		buildingScene = GD.Load<PackedScene>("res://scenes/building/Building.tscn");
 
 		cursor = GetNode<Sprite2D>("Cursor");
+
 		placeBuildingButton = GetNode<Button>("PlaceBuildingButton");
+
 		highlightTileMapLayer = GetNode<TileMapLayer>("HighlightTileMapLayer");
 
 		cursor.Visible = false;
@@ -58,12 +63,14 @@ public partial class Main : Node
 	public override void _Process(double delta)
 	{
 		var gridPosition = GetMouseGridCellPosition();
+
 		cursor.GlobalPosition = gridPosition * 64;
 
 		if (cursor.Visible &&
 			(!hoveredGridCell.HasValue || hoveredGridCell.Value != gridPosition))
 		{
 			hoveredGridCell = gridPosition;
+
 			UpdateHighlightTileMapLayer();
 		}
 	}
@@ -72,50 +79,55 @@ public partial class Main : Node
 	private Vector2 GetMouseGridCellPosition()
 	{
 		var mousePosition = highlightTileMapLayer.GetGlobalMousePosition();
+
 		var gridPosition = mousePosition / 64;
+
 		gridPosition = gridPosition.Floor();
+
 		return gridPosition;
 	}
 
-    // BUILDING PLACEMENT: Create a new building at the mouse position
-    private void PlaceBuildingAtMousePosition()
-    {
-        if (!hoveredGridCell.HasValue) return;
+	// BUILDING PLACEMENT: Create a new building at the mouse position
+	private void PlaceBuildingAtMousePosition()
+	{
+		if (!hoveredGridCell.HasValue) return;
 
-        var building = buildingScene.Instantiate<Node2D>();
+		var building = buildingScene.Instantiate<Node2D>();
 
-        AddChild(building);
+		AddChild(building);
 
-        building.GlobalPosition = hoveredGridCell.Value * 64;
+		building.GlobalPosition = hoveredGridCell.Value * 64;
 
-        occupiedCells.Add(hoveredGridCell.Value);
+		occupiedCells.Add(hoveredGridCell.Value);
 
-        hoveredGridCell = null;
-        UpdateHighlightTileMapLayer();
-    }
-    
+		hoveredGridCell = null;
+
+		UpdateHighlightTileMapLayer();
+	}
+	
 	// This method draw and update the range preview that helps players understand 
-    // the strategic implications of their building placement.
-    private void UpdateHighlightTileMapLayer()
-    {
-        highlightTileMapLayer.Clear();
-        if (!hoveredGridCell.HasValue)
-        {
-            return;
-        }
-        for (var x = hoveredGridCell.Value.X - 3; x <= hoveredGridCell.Value.X + 3; x++)
-        {
-            for (var y = hoveredGridCell.Value.Y - 3; y <= hoveredGridCell.Value.Y + 3; y++)
-            {
-                highlightTileMapLayer.SetCell(
-                    new Vector2I((int)x, (int)y), 0, Vector2I.Zero);
-            }
-        }
-    }
+	// the strategic implications of their building placement.
+	private void UpdateHighlightTileMapLayer()
+	{
+		highlightTileMapLayer.Clear();
+		
+		if (!hoveredGridCell.HasValue)
+		{
+			return;
+		}
+		for (var x = hoveredGridCell.Value.X - 3; x <= hoveredGridCell.Value.X + 3; x++)
+		{
+			for (var y = hoveredGridCell.Value.Y - 3; y <= hoveredGridCell.Value.Y + 3; y++)
+			{
+				highlightTileMapLayer.SetCell(
+					new Vector2I((int)x, (int)y), 0, Vector2I.Zero);
+			}
+		}
+	}
 
 	// USER INTERFACE EVENT HANDLER: This method responds to button press events
 	// and serves as the entry point for initiating building placement mode.
-	public void OnButtonPressed()
+	private void OnButtonPressed()
 	{
 		cursor.Visible = true;
 	}
