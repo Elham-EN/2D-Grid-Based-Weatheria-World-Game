@@ -18,7 +18,7 @@ public partial class Main : Node
 	
 	private Button placeBuildingButton;
  
-	private Vector2? hoveredGridCell;
+	private Vector2I? hoveredGridCell;
 	
 	// INITIALIZATION: Set up everything before the game starts
 	public override void _Ready()
