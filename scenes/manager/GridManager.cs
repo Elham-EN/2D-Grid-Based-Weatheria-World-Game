@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using Game.Component;
 using Godot;
 
 namespace Game.Manager;
@@ -51,9 +53,39 @@ public partial class GridManager : Node
 		occupiedCells.Add(tilePosition);
 	}
 
-	public void HighlightValidTilesInRadius(Vector2I rootCell, int radius)
+	// Shows all areas where new buildings can be placed by highlighting tiles 
+	// around existing buildings based on their individual build ranges
+	// Simple flow: Clear old highlights → Find all buildings → For each building, 
+	// highlight tiles within its range → Result shows total buildable area
+	public void HighlightBuildableTiles()
 	{
+		// Remove any existing highlight tiles from previous operations
 		ClearHighlightedTiles();
+		// Find all nodes in the "BuildingComponent" group across the entire scene tree
+		var buildingComponents = GetTree().GetNodesInGroup(nameof(BuildingComponent))
+			// Loop over all nodes that are returned & cast them to BuildingComponent
+			.Cast<BuildingComponent>();
+		// Process each building that has a BuildingComponent attached	
+		// Old way: Highlight around where you're about to place a building
+		// New way: Highlight around all existing buildings that allow expansion
+		foreach (var buildingComponent in buildingComponents)
+		{
+			// For this building, highlight all valid tiles within its build range
+			// Uses the building's current grid position as center point
+			// Uses the building's configured radius to determine highlight area
+			// it only highlights areas within range of your existing buildings.
+			HighlightValidTilesInRadius(buildingComponent.GetGridCellPosition(),
+				buildingComponent.BuildableRadius);
+		}
+	}
+
+	public void ClearHighlightedTiles()
+	{
+		highlightTileMapLayer.Clear();
+	}
+
+	private void HighlightValidTilesInRadius(Vector2I rootCell, int radius)
+	{
         // Loop through all tiles in the radius
 		for (var x = rootCell.X - radius; x <= rootCell.X + radius; x++)
 		{
@@ -61,7 +93,7 @@ public partial class GridManager : Node
 			{
 				var tilePosition = new Vector2I(x, y);
 				// If a tile is NOT valid (occupied) → continue (skip to next iteration)
-				//  This gives players clear indication of where they can place buildings 
+				// This gives players clear indication of where they can place buildings 
 				// within the radius, while occupied spots remain unhighlighted.
 				if (!IsTilePositionValid(tilePosition)) continue;
 				// If a tile IS valid (available) → highlight it. Only available tiles 
@@ -69,10 +101,5 @@ public partial class GridManager : Node
 				highlightTileMapLayer.SetCell(tilePosition, 0, Vector2I.Zero);
 			}
 		}
-	}
-
-	public void ClearHighlightedTiles()
-	{
-		highlightTileMapLayer.Clear();
 	}
 }

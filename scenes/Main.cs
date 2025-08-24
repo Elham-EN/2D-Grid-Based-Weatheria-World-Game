@@ -63,7 +63,7 @@ public partial class Main : Node
 		{
 			hoveredGridCell = gridPosition;
 
-			gridManager.HighlightValidTilesInRadius(hoveredGridCell.Value, 3);
+			gridManager.HighlightBuildableTiles();
 		}
 	}
 
