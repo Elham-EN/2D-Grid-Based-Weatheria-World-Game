@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Game.Manager;
 using Godot;
 
@@ -19,13 +18,8 @@ public partial class Main : Node
 	
 	private Button placeBuildingButton;
  
-	private TileMapLayer highlightTileMapLayer;
-
 	private Vector2? hoveredGridCell;
 	
-	
-
-
 	// INITIALIZATION: Set up everything before the game starts
 	public override void _Ready()
 	{
@@ -36,8 +30,6 @@ public partial class Main : Node
 		cursor = GetNode<Sprite2D>("Cursor");
 
 		placeBuildingButton = GetNode<Button>("PlaceBuildingButton");
-
-		highlightTileMapLayer = GetNode<TileMapLayer>("HighlightTileMapLayer");
 
 		cursor.Visible = false;
 
@@ -62,7 +54,7 @@ public partial class Main : Node
 	// the game is running.
 	public override void _Process(double delta)
 	{
-		var gridPosition = GetMouseGridCellPosition();
+		var gridPosition = gridManager.GetMouseGridCellPosition();
 
 		cursor.GlobalPosition = gridPosition * 64;
 
@@ -73,18 +65,6 @@ public partial class Main : Node
 
 			gridManager.HighlightValidTilesInRadius(hoveredGridCell.Value, 3);
 		}
-	}
-
-	// MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
-	private Vector2 GetMouseGridCellPosition()
-	{
-		var mousePosition = highlightTileMapLayer.GetGlobalMousePosition();
-
-		var gridPosition = mousePosition / 64;
-
-		gridPosition = gridPosition.Floor();
-
-		return gridPosition;
 	}
 
 	// BUILDING PLACEMENT: Create a new building at the mouse position
@@ -104,8 +84,6 @@ public partial class Main : Node
 
 		gridManager.ClearHighlightedTiles();
 	}
-	
-	
 
 	// USER INTERFACE EVENT HANDLER: This method responds to button press events
 	// and serves as the entry point for initiating building placement mode.
