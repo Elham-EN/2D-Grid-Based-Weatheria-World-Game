@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Manager;
 using Godot;
 
 namespace Game;
@@ -10,28 +11,27 @@ namespace Game;
 
 public partial class Main : Node
 {
-	// GAME OBJECTS WE NEED TO CONTROL:
+	private GridManager gridManager;
+
 	private Sprite2D cursor;
 	
-	// A template/blueprint for building objects that serves as our factory pattern 
-	// implementation.
 	private PackedScene buildingScene;
 	
-	// The user interface element that initiates placement mode.
 	private Button placeBuildingButton;
  
 	private TileMapLayer highlightTileMapLayer;
 
 	private Vector2? hoveredGridCell;
 	
-	// To mark occupied cells (cannat have duplicate element, must be unique)
-	private HashSet<Vector2> occupiedCells = new HashSet<Vector2>();
+	
 
 
 	// INITIALIZATION: Set up everything before the game starts
 	public override void _Ready()
 	{
 		buildingScene = GD.Load<PackedScene>("res://scenes/building/Building.tscn");
+
+		gridManager = GetNode<GridManager>("GridManager");
 
 		cursor = GetNode<Sprite2D>("Cursor");
 
@@ -49,7 +49,7 @@ public partial class Main : Node
 	public override void _UnhandledInput(InputEvent evt)
 	{
 		if (hoveredGridCell.HasValue && evt.IsActionPressed("left_click")
-			&& !occupiedCells.Contains(hoveredGridCell.Value))
+			&& gridManager.IsTilePositionValid(hoveredGridCell.Value))
 		{
 			PlaceBuildingAtMousePosition();
 
@@ -71,7 +71,7 @@ public partial class Main : Node
 		{
 			hoveredGridCell = gridPosition;
 
-			UpdateHighlightTileMapLayer();
+			gridManager.HighlightValidTilesInRadius(hoveredGridCell.Value, 3);
 		}
 	}
 
@@ -98,32 +98,14 @@ public partial class Main : Node
 
 		building.GlobalPosition = hoveredGridCell.Value * 64;
 
-		occupiedCells.Add(hoveredGridCell.Value);
+		gridManager.MarkTileAsOccupied(hoveredGridCell.Value);
 
 		hoveredGridCell = null;
 
-		UpdateHighlightTileMapLayer();
+		gridManager.ClearHighlightedTiles();
 	}
 	
-	// This method draw and update the range preview that helps players understand 
-	// the strategic implications of their building placement.
-	private void UpdateHighlightTileMapLayer()
-	{
-		highlightTileMapLayer.Clear();
-		
-		if (!hoveredGridCell.HasValue)
-		{
-			return;
-		}
-		for (var x = hoveredGridCell.Value.X - 3; x <= hoveredGridCell.Value.X + 3; x++)
-		{
-			for (var y = hoveredGridCell.Value.Y - 3; y <= hoveredGridCell.Value.Y + 3; y++)
-			{
-				highlightTileMapLayer.SetCell(
-					new Vector2I((int)x, (int)y), 0, Vector2I.Zero);
-			}
-		}
-	}
+	
 
 	// USER INTERFACE EVENT HANDLER: This method responds to button press events
 	// and serves as the entry point for initiating building placement mode.
