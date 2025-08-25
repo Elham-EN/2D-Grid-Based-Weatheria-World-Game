@@ -20,7 +20,7 @@ public partial class BuildingComponent : Node2D
 		AddToGroup(nameof(BuildingComponent));
 		// Announces this building's placement to all game systems 
 		// via the global event system
-		GameEvents.EmitBuildingPlaced(this);
+		Callable.From(() => GameEvents.EmitBuildingPlaced(this)).CallDeferred();
 	}
 
 	// It returns where this particular building is located in the game world

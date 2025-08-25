@@ -11,11 +11,9 @@ namespace Game.Manager;
 /// </summary>
 public partial class GridManager : Node
 {
-	// Tracks which grid positions already have buildings on them, preventing 
-	// players from placing multiple buildings in the same location
-	// This stores grid coordinates like (3, 2), (5, 7), etc. - each representing 
-	// one occupied grid cell. Each grid cell can only hold one building
-	private HashSet<Vector2I> occupiedCells = new HashSet<Vector2I>();
+	// Cached buildable tiles system that maintains a running list of valid tiles
+	// That always knows exactly which grid positions allow new building placement
+	private HashSet<Vector2I> validBuildableTiles = new HashSet<Vector2I>();
 	[Export]
 	private TileMapLayer highlightTileMapLayer;
 	// Contain Terrian information: e.g. sand
@@ -30,14 +28,6 @@ public partial class GridManager : Node
 		GameEvents.Instance.BuildingPlaced += OnBuildingPlaced;
 	}
 
-	// Event handler that responds automatically when any building is placed
-	private void OnBuildingPlaced(BuildingComponent buildingComponent)
-	{
-		// Mark the building's grid position as occupied to prevent future 
-		// placement there
-		MarkTileAsOccupied(buildingComponent.GetGridCellPosition());
-	}
-
 	// MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
 	public Vector2I GetMouseGridCellPosition()
 	{
@@ -50,9 +40,10 @@ public partial class GridManager : Node
 		return new Vector2I((int)gridPosition.X, (int)gridPosition.Y);
 	}
 
-	// Checks if a position is available for building & Returns 
-	// true if the position is NOT in the occupied set
-	// When called: Before allowing building placement
+	// Could a building theoretically be placed here based on terrain?" This method 
+	// checks the underlying tilemap data to determine if a tile is suitable for 
+	// construction - essentially asking if the terrain type (sand, grass) supports 
+	// buildings versus impassable terrain (water, mountains).
 	public bool IsTilePositionValid(Vector2I tilePosition)
 	{
 		// Returns the TileData object associated with the given cell,
@@ -60,64 +51,68 @@ public partial class GridManager : Node
 		// If that given grid cell has no custom data, that means it's not buildable
 		// So that means you cannot place building the that grid cell.
 		if (customData == null) return false;
-		if (!(bool)customData.GetCustomData("buildable")) return false;
-		return !occupiedCells.Contains(tilePosition);
+		// Return if this is buildable
+		return (bool)customData.GetCustomData("buildable");
+		
 	}
 
-	// Records that a position now has a building & 
-	// When called: After successfully placing a building
-	public void MarkTileAsOccupied(Vector2I tilePosition)
+    // Can a building be placed here right now given the current game state?" This 
+	// method checks if the tile is both valid terrain AND within range of existing 
+	// buildings that extend the building area. 
+	public bool IsTilePositionBuildable(Vector2I tilePosition)
 	{
-		occupiedCells.Add(tilePosition);
+		return validBuildableTiles.Contains(tilePosition);
 	}
-
-	// Shows all areas where new buildings can be placed by highlighting tiles 
-	// around existing buildings based on their individual build ranges
-	// Simple flow: Clear old highlights → Find all buildings → For each building, 
-	// highlight tiles within its range → Result shows total buildable area
+    
+	// Shows yellow highlight tiles to guide player where they can build
 	public void HighlightBuildableTiles()
 	{
-		// Remove any existing highlight tiles from previous operations
-		ClearHighlightedTiles();
-		// Find all nodes in the "BuildingComponent" group across the entire scene tree
-		var buildingComponents = GetTree().GetNodesInGroup(nameof(BuildingComponent))
-			// Loop over all nodes that are returned & cast them to BuildingComponent
-			.Cast<BuildingComponent>();
-		// Process each building that has a BuildingComponent attached	
-		// Old way: Highlight around where you're about to place a building
-		// New way: Highlight around all existing buildings that allow expansion
-		foreach (var buildingComponent in buildingComponents)
+		// Loop through each cached buildable position
+		foreach (var tilePosition in validBuildableTiles)
 		{
-			// For this building, highlight all valid tiles within its build range
-			// Uses the building's current grid position as center point
-			// Uses the building's configured radius to determine highlight area
-			// it only highlights areas within range of your existing buildings.
-			HighlightValidTilesInRadius(buildingComponent.GetGridCellPosition(),
-				buildingComponent.BuildableRadius);
+			// Display yellow tile at this position to show it's available for 
+			// building
+			highlightTileMapLayer.SetCell(tilePosition, 0, Vector2I.Zero);
 		}
 	}
 
+	// This clears the visual feedback showing buildable areas
 	public void ClearHighlightedTiles()
 	{
 		highlightTileMapLayer.Clear();
 	}
 
-	private void HighlightValidTilesInRadius(Vector2I rootCell, int radius)
+	// Adds all buildable tiles around a newly placed building to the cache
+	private void UpdateValidBuildableTiles(BuildingComponent buildingComponent)
 	{
-        // Loop through all tiles in the radius
+		// It calculates the grid position of the newly placed building
+		var rootCell = buildingComponent.GetGridCellPosition();
+		// Retrieves the building's configurable radius
+		var radius = buildingComponent.BuildableRadius;
+		// Iterates through all grid positions within that radius
 		for (var x = rootCell.X - radius; x <= rootCell.X + radius; x++)
 		{
 			for (var y = rootCell.Y - radius; y <= rootCell.Y + radius; y++)
 			{
 				var tilePosition = new Vector2I(x, y);
-				// If a tile is NOT valid (occupied) → continue (skip to next iteration)
-				// This gives players clear indication of where they can place buildings 
-				// within the radius, while occupied spots remain unhighlighted.
+				// Skip tiles with unsuitable terrain (water, rocks) - only check 
+				// buildable ground types
 				if (!IsTilePositionValid(tilePosition)) continue;
-				// If a tile IS valid (available) → highlight it. Only available tiles 
-				// get highlighted
-				highlightTileMapLayer.SetCell(tilePosition, 0, Vector2I.Zero);
+				// Valid positions are added to the cache, extending the player's 
+				// buildable area
+				validBuildableTiles.Add(tilePosition);
 			}
 		}
+		// Remove the building's tile from buildable cache since buildings can't stack 
+		// on each other. This prevents players from placing multiple buildings on the 
+		// same grid position by ensuring occupied tiles aren't marked as buildable.
+		validBuildableTiles.Remove(buildingComponent.GetGridCellPosition());
+	} 
+	
+	// Event handler: Automatically updates the grid's buildable areas when a 
+	// new building is placed
+	private void OnBuildingPlaced(BuildingComponent buildingComponent)
+	{
+		UpdateValidBuildableTiles(buildingComponent);
 	}
 }

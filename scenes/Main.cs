@@ -41,7 +41,7 @@ public partial class Main : Node
 	public override void _UnhandledInput(InputEvent evt)
 	{
 		if (hoveredGridCell.HasValue && evt.IsActionPressed("left_click")
-			&& gridManager.IsTilePositionValid(hoveredGridCell.Value))
+			&& gridManager.IsTilePositionBuildable(hoveredGridCell.Value))
 		{
 			PlaceBuildingAtMousePosition();
 
@@ -49,39 +49,39 @@ public partial class Main : Node
 		}
 	}
 
-	// CONTINUOUS UPDATE LOOP: This method executes every frame (typically 60 times
-	// per second) and handles all the real-time updates that need to happen while
-	// the game is running.
+	// CONTINUOUS UPDATE LOOP: 
 	public override void _Process(double delta)
 	{
 		var gridPosition = gridManager.GetMouseGridCellPosition();
-
+		// Snap cursor visually to the grid by converting grid coords back to pixels
 		cursor.GlobalPosition = gridPosition * 64;
-
+		// Only update highlights when cursor is visible and mouse moved to a 
+		// new grid cell
 		if (cursor.Visible &&
 			(!hoveredGridCell.HasValue || hoveredGridCell.Value != gridPosition))
 		{
+			// Remember which grid cell we're now hovering over
 			hoveredGridCell = gridPosition;
-
+			// Show yellow highlights of all buildable areas around existing buildings
 			gridManager.HighlightBuildableTiles();
 		}
 	}
 
-	// BUILDING PLACEMENT: Create a new building at the mouse position
+	// Creates and places a new building at the cursor location
 	private void PlaceBuildingAtMousePosition()
 	{
+		// Exit if no grid position is being hovered
 		if (!hoveredGridCell.HasValue) return;
-
+		// Create new building instance from the loaded scene template
 		var building = buildingScene.Instantiate<Node2D>();
-
+		// Add building to scene tree, which triggers its _Ready() method
 		AddChild(building);
-
+		// Set building's pixel position by converting grid coordinates 
+		// to world position
 		building.GlobalPosition = hoveredGridCell.Value * 64;
-
-		gridManager.MarkTileAsOccupied(hoveredGridCell.Value);
-
+		// Clear hover state since building is now placed
 		hoveredGridCell = null;
-
+		// Remove yellow highlight tiles since placement mode is ending
 		gridManager.ClearHighlightedTiles();
 	}
 
