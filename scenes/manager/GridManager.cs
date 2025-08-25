@@ -5,7 +5,10 @@ using Godot;
 
 namespace Game.Manager;
 
-// GridManager handles all grid-related operations
+/// <summary>
+/// Manages the game's grid-based building system, tracking occupied tiles 
+/// and validating placement rules.
+/// </summary>
 public partial class GridManager : Node
 {
 	// Tracks which grid positions already have buildings on them, preventing 
@@ -19,6 +22,21 @@ public partial class GridManager : Node
 	[Export]
 	private TileMapLayer baseTerrainTileMapLayer;
 
+	// Subscribe to building placement events when GridManager starts up
+	public override void _Ready()
+	{
+		// Connect our handler method to the BuildingPlaced signal 
+		// from GameEvents
+		GameEvents.Instance.BuildingPlaced += OnBuildingPlaced;
+	}
+
+	// Event handler that responds automatically when any building is placed
+	private void OnBuildingPlaced(BuildingComponent buildingComponent)
+	{
+		// Mark the building's grid position as occupied to prevent future 
+		// placement there
+		MarkTileAsOccupied(buildingComponent.GetGridCellPosition());
+	}
 
 	// MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
 	public Vector2I GetMouseGridCellPosition()

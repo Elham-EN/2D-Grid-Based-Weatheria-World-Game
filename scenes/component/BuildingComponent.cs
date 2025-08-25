@@ -2,8 +2,11 @@ using Godot;
 
 namespace Game.Component;
 
-// This class have some functionality and some data configuration
-// related to properties of the building
+/// <summary>
+/// Reusable component that defines building properties and manages 
+/// grid positioning. Attached to buildings to specify their buildable 
+/// radius and provide grid utilities.
+/// </summary>
 public partial class BuildingComponent : Node2D
 {
 	// How far from this building can you place new buildings
@@ -15,8 +18,12 @@ public partial class BuildingComponent : Node2D
 		// Add BuildingComponent to a group. Groups provide a tagging 
 		// system for nodes, allowing you to identify similar nodes.
 		AddToGroup(nameof(BuildingComponent));
+		// Announces this building's placement to all game systems 
+		// via the global event system
+		GameEvents.EmitBuildingPlaced(this);
 	}
 
+	// It returns where this particular building is located in the game world
 	public Vector2I GetGridCellPosition()
 	{
 		var gridPosition = GlobalPosition / 64;
