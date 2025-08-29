@@ -36,15 +36,18 @@ public partial class Main : Node
 		placeBuildingButton.Pressed += OnButtonPressed;
 	}
 
-	// INPUT EVENT PROCESSING: This method handles discrete input events and specifically 
-	// responds to mouse click events when certain conditions are met.
+	// Handles mouse clicks during building placement mode
 	public override void _UnhandledInput(InputEvent evt)
 	{
+		// Check three conditions: cursor is over a grid cell, left mouse clicked, 
+		// and Validates the position is within range of existing buildings and on 
+		// suitable terrain
 		if (hoveredGridCell.HasValue && evt.IsActionPressed("left_click")
 			&& gridManager.IsTilePositionBuildable(hoveredGridCell.Value))
 		{
+			// Create and place the building at the hovered location
 			PlaceBuildingAtMousePosition();
-
+			// Exit building placement mode by hiding the cursor
 			cursor.Visible = false;
 		}
 	}
@@ -52,6 +55,7 @@ public partial class Main : Node
 	// CONTINUOUS UPDATE LOOP: 
 	public override void _Process(double delta)
 	{
+		// Convert mouse pixel position to grid coordinates for snap-to-grid behavior
 		var gridPosition = gridManager.GetMouseGridCellPosition();
 		// Snap cursor visually to the grid by converting grid coords back to pixels
 		cursor.GlobalPosition = gridPosition * 64;
@@ -62,26 +66,25 @@ public partial class Main : Node
 		{
 			// Remember which grid cell we're now hovering over
 			hoveredGridCell = gridPosition;
-			// Show yellow highlights of all buildable areas around existing buildings
-			gridManager.HighlightBuildableTiles();
+			 // GREEN tiles - expansion preview when hovering
+			gridManager.HighlightExpandableBuildableTiles(hoveredGridCell.Value, 3);
 		}
 	}
 
 	// Creates and places a new building at the cursor location
 	private void PlaceBuildingAtMousePosition()
 	{
-		// Exit if no grid position is being hovered
+		// Safety check - abort if cursor isn't positioned over a valid grid cell
 		if (!hoveredGridCell.HasValue) return;
-		// Create new building instance from the loaded scene template
+		// Create new building object from the preloaded scene template
 		var building = buildingScene.Instantiate<Node2D>();
 		// Add building to scene tree, which triggers its _Ready() method
 		AddChild(building);
-		// Set building's pixel position by converting grid coordinates 
-		// to world position
+		// Position building in world space by converting grid coordinates to pixels
 		building.GlobalPosition = hoveredGridCell.Value * 64;
 		// Clear hover state since building is now placed
 		hoveredGridCell = null;
-		// Remove yellow highlight tiles since placement mode is ending
+		// Clean up visual feedback - remove highlight tiles and exit placement mode
 		gridManager.ClearHighlightedTiles();
 	}
 
@@ -90,5 +93,7 @@ public partial class Main : Node
 	private void OnButtonPressed()
 	{
 		cursor.Visible = true;
+		// WHITE tiles - current buildable areas
+		gridManager.HighlightBuildableTiles();
 	}
 }
