@@ -21,12 +21,16 @@ public partial class GridManager : Node
 	[Export]
 	private TileMapLayer baseTerrainTileMapLayer;
 
+	private List<TileMapLayer> allTileMapLayers = [];
+
 	// Subscribe to building placement events when GridManager starts up
 	public override void _Ready()
 	{
 		// Connect our handler method to the BuildingPlaced signal 
 		// from GameEvents
 		GameEvents.Instance.BuildingPlaced += OnBuildingPlaced;
+
+		allTileMapLayers = GetAllTileMapLayers(baseTerrainTileMapLayer);
 	}
 
 	// MOUSE-TO-GRID CONVERSION: Convert mouse pixel position to grid coordinates
@@ -41,20 +45,24 @@ public partial class GridManager : Node
 		return new Vector2I((int)gridPosition.X, (int)gridPosition.Y);
 	}
 
-	// Could a building theoretically be placed here based on terrain?" This method 
-	// checks the underlying tilemap data to determine if a tile is suitable for 
-	// construction - essentially asking if the terrain type (sand, grass) supports 
-	// buildings versus impassable terrain (water, mountains).
+	
+	// Checks if a position is valid for building by examining layers from most 
+	// visible to least visible. Trees on top override buildable sand underneath 
+	// - only the topmost visible tile matters.
 	public bool IsTilePositionValid(Vector2I tilePosition)
 	{
-		// Returns the TileData object associated with the given cell,
-		var customData = baseTerrainTileMapLayer.GetCellTileData(tilePosition);
-		// If that given grid cell has no custom data, that means it's not buildable
-		// So that means you cannot place building the that grid cell.
-		if (customData == null) return false;
-		// Return if this is buildable
-		return (bool)customData.GetCustomData("buildable");
-		
+		// Check each layer in visibility order (topmost first)
+		foreach (var layer in allTileMapLayers)
+		{
+			// Get tile data at this position on current layer
+			var customData = layer.GetCellTileData(tilePosition);
+			// No tile on this layer - check the layer beneath it
+			if (customData == null) continue;
+			 // Found a tile! Return its buildable status (trees = false, sand = true)
+			return (bool)customData.GetCustomData("buildable");
+		}
+		// No tiles found on any layer - not buildable
+		return false;
 	}
 
     // Can a building be placed here right now given the current game state?" This 
@@ -150,6 +158,35 @@ public partial class GridManager : Node
 				result.Add(tilePosition);
 			}
 		}
+		return result;
+	}
+
+
+	// Recursively collects all TileMapLayer nodes in depth-first order with most 
+	// visible layers first. Ensures buildability checks examine what players see 
+	// (trees) before hidden layers (sand underneath).
+	private List<TileMapLayer> GetAllTileMapLayers(TileMapLayer rootTileMapLayer)
+	{
+		// Store all tilemap layers in visibility priority order
+		var result = new List<TileMapLayer>();
+		// Get child nodes of current layer
+		var children = rootTileMapLayer.GetChildren();
+		// Reverse order - Godot renders later children on top, we need topmost 
+		// layers first
+		children.Reverse();
+		// Process each child tilemap layer
+		foreach (var child in children)
+		{
+			// Only handle TileMapLayer nodes
+			if (child is TileMapLayer childLayer)
+			{
+				// Recursively collect all layers from child's subtree first 
+				// (depth-first)
+				result.AddRange(GetAllTileMapLayers(childLayer));
+			}
+		}
+		// Add current layer after all its children (children render on top)
+		result.Add(rootTileMapLayer);
 		return result;
 	}
 	
