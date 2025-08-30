@@ -19,6 +19,8 @@ public partial class Main : Node
 	private Button placeBuildingButton;
  
 	private Vector2I? hoveredGridCell;
+
+	private Node2D ySortRoot;
 	
 	// INITIALIZATION: Set up everything before the game starts
 	public override void _Ready()
@@ -30,6 +32,8 @@ public partial class Main : Node
 		cursor = GetNode<Sprite2D>("Cursor");
 
 		placeBuildingButton = GetNode<Button>("PlaceBuildingButton");
+
+		ySortRoot = GetNode<Node2D>("YSortRoot");
 
 		cursor.Visible = false;
 
@@ -79,7 +83,7 @@ public partial class Main : Node
 		// Create new building object from the preloaded scene template
 		var building = buildingScene.Instantiate<Node2D>();
 		// Add building to scene tree, which triggers its _Ready() method
-		AddChild(building);
+		ySortRoot.AddChild(building);
 		// Position building in world space by converting grid coordinates to pixels
 		building.GlobalPosition = hoveredGridCell.Value * 64;
 		// Clear hover state since building is now placed
