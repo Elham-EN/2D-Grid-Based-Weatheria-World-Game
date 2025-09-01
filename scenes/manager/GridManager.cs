@@ -118,7 +118,7 @@ public partial class GridManager : Node
 		// It calculates the grid position of the newly placed building
 		var rootCell = buildingComponent.GetGridCellPosition();
 		// Retrieves the building's configurable radius
-		var radius = buildingComponent.BuildableRadius;
+		var radius = buildingComponent.BuildingResource.BuildableRadius;
 		var validTiles = GetValidTilesInRadius(rootCell, radius);
 		// Valid positions are added to the cache, extending the player's 
 		// buildable area

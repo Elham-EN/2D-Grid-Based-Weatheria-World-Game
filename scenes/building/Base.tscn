@@ -9,7 +9,7 @@ size = Vector2(64, 64)
 y_sort_enabled = true
 
 [node name="BuildingComponent" parent="." instance=ExtResource("1_yhg6d")]
-BuildableRadius = 2
+buildingResourcePath = "uid://bn5l3wt8hie2b"
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(32, 32)

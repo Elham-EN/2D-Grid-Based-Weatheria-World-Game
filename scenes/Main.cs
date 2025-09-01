@@ -1,5 +1,5 @@
-using System;
 using Game.Manager;
+using Game.Resources.Building;
 using Godot;
 
 namespace Game;
@@ -15,11 +15,11 @@ public partial class Main : Node
 
 	private Sprite2D cursor;
 
-	private PackedScene towerScene;
+	private BuildingResource towerResource;
 
-	private PackedScene villageScene;
+	private BuildingResource villageResource;
 
-	private PackedScene toPlaceBuildingScene;
+	private BuildingResource toPlaceBuildingResource;
 
 	private Button placeTowerButton;
 
@@ -32,9 +32,9 @@ public partial class Main : Node
 	// INITIALIZATION: Set up everything before the game starts
 	public override void _Ready()
 	{
-		towerScene = GD.Load<PackedScene>("res://scenes/building/Tower.tscn");
+		towerResource = GD.Load<BuildingResource>("res://resources/building/tower.tres");
 
-		villageScene = GD.Load<PackedScene>("res://scenes/building/Village.tscn");
+		villageResource = GD.Load<BuildingResource>("res://resources/building/village.tres");
 
 		gridManager = GetNode<GridManager>("GridManager");
 
@@ -48,9 +48,9 @@ public partial class Main : Node
 
 		cursor.Visible = false;
 
-		placeTowerButton.Pressed += OnTowerButtonPressed;
+		placeTowerButton.Pressed += OnPlaceTowerButtonPressed;
 
-		placeVillageButton.Pressed += OnVillageButtonPressed;
+		placeVillageButton.Pressed += OnPlaceVillageButtonPressed;
 	}
 
 	// Handles mouse clicks during building placement mode
@@ -78,13 +78,14 @@ public partial class Main : Node
 		cursor.GlobalPosition = gridPosition * 64;
 		// Only update highlights when cursor is visible and mouse moved to a 
 		// new grid cell
-		if (cursor.Visible &&
+		if (toPlaceBuildingResource != null && cursor.Visible &&
 			(!hoveredGridCell.HasValue || hoveredGridCell.Value != gridPosition))
 		{
 			// Remember which grid cell we're now hovering over
 			hoveredGridCell = gridPosition;
 			// GREEN tiles - expansion preview when hovering
-			gridManager.HighlightExpandableBuildableTiles(hoveredGridCell.Value, 3);
+			gridManager.HighlightExpandableBuildableTiles(hoveredGridCell.Value,
+				toPlaceBuildingResource.BuildableRadius);
 		}
 	}
 
@@ -94,7 +95,7 @@ public partial class Main : Node
 		// Safety check - abort if cursor isn't positioned over a valid grid cell
 		if (!hoveredGridCell.HasValue) return;
 		// Create new building object from the preloaded scene template
-		var building = toPlaceBuildingScene.Instantiate<Node2D>();
+		var building = toPlaceBuildingResource.BuildingScene.Instantiate<Node2D>();
 		// Add building to scene tree, which triggers its _Ready() method
 		ySortRoot.AddChild(building);
 		// Position building in world space by converting grid coordinates to pixels
@@ -107,17 +108,17 @@ public partial class Main : Node
 
 	// USER INTERFACE EVENT HANDLER: This method responds to button press events
 	// and serves as the entry point for initiating building placement mode.
-	private void OnTowerButtonPressed()
+	private void OnPlaceTowerButtonPressed()
 	{
-		toPlaceBuildingScene = towerScene;
+		toPlaceBuildingResource = towerResource;
 		cursor.Visible = true;
 		// WHITE tiles - current buildable areas
 		gridManager.HighlightBuildableTiles();
 	}
 	
-	private void OnVillageButtonPressed()
+	private void OnPlaceVillageButtonPressed()
     {
-		toPlaceBuildingScene = villageScene;
+		toPlaceBuildingResource = villageResource;
 		cursor.Visible = true;
 		// WHITE tiles - current buildable areas
 		gridManager.HighlightBuildableTiles();

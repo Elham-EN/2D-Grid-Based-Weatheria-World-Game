@@ -1,3 +1,4 @@
+using Game.Resources.Building;
 using Godot;
 
 namespace Game.Component;
@@ -12,13 +13,17 @@ namespace Game.Component;
 /// </summary>
 public partial class BuildingComponent : Node2D
 {
-	// Configurable radius determining how far this building extends 
-	// buildable area
-	[Export]
-	public int BuildableRadius { get; private set; }
+	[Export(PropertyHint.File, ".tres")]
+	public string buildingResourcePath;
+
+	public BuildingResource BuildingResource { get; private set; }
 
 	public override void _Ready()
 	{
+		if (buildingResourcePath != null)
+		{
+			BuildingResource = GD.Load<BuildingResource>(buildingResourcePath);
+		}
 		// Enables the grid system to find all buildings without 
 		// hardcoded references
 		AddToGroup(nameof(BuildingComponent));
