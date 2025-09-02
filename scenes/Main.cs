@@ -51,6 +51,8 @@ public partial class Main : Node
 		placeTowerButton.Pressed += OnPlaceTowerButtonPressed;
 
 		placeVillageButton.Pressed += OnPlaceVillageButtonPressed;
+
+		gridManager.ResourceTilesUpdated += OnResourceTilesUpdated;
 	}
 
 	// Handles mouse clicks during building placement mode
@@ -118,12 +120,17 @@ public partial class Main : Node
 		// WHITE tiles - current buildable areas
 		gridManager.HighlightBuildableTiles();
 	}
-	
+
 	private void OnPlaceVillageButtonPressed()
-    {
+	{
 		toPlaceBuildingResource = villageResource;
 		cursor.Visible = true;
 		// WHITE tiles - current buildable areas
 		gridManager.HighlightBuildableTiles();
-    }
+	}
+
+	private void OnResourceTilesUpdated(int resourceCount)
+	{
+		GD.Print(resourceCount);
+	}
 }

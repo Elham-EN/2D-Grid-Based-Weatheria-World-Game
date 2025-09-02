@@ -14,9 +14,17 @@ public partial class GridManager : Node
 {
 	private const string IS_BUILDABLE = "is_buildable";
 	private const string IS_WOOD = "is_wood";
+
+	[Signal]
+	public delegate void ResourceTilesUpdatedEventHandler(int collectedTiles);
+
 	// Cached buildable tiles system that maintains a running list of valid tiles
 	// That always knows exactly which grid positions allow new building placement
 	private HashSet<Vector2I> validBuildableTiles = new HashSet<Vector2I>();
+
+	// Keep track of how many resources we are currently collecting
+	private HashSet<Vector2I> CollectedResourceTiles = new HashSet<Vector2I>();
+
 	// Visual layer that displays white highlight tiles to show buildable areas
 	[Export]
 	private TileMapLayer highlightTileMapLayer;
@@ -150,6 +158,23 @@ public partial class GridManager : Node
 		validBuildableTiles.ExceptWith(GetOccupiedTiles());
 	}
 
+	private void UpdateCollectedResourceTiles(BuildingComponent buildingComponent)
+	{
+		var rootCell = buildingComponent.GetGridCellPosition();
+		var radius = buildingComponent.BuildingResource.ResourceRadius;
+		var resourceTiles = GetResourceTilesInRadius(rootCell, radius);
+		var oldResourceTileCount = CollectedResourceTiles.Count;
+		// Only adds unique elements. If an element exists in both the current set 
+		// and the other collection, it will only appear once in the resulting set.
+		CollectedResourceTiles.UnionWith(resourceTiles);
+		// Only Emit Signal when the resource tile count is updated
+		if (oldResourceTileCount != CollectedResourceTiles.Count)
+		{
+			// Emit the signal to notify other nodes that resources have been updated
+			EmitSignal(SignalName.ResourceTilesUpdated, CollectedResourceTiles.Count);
+		}
+	}
+
 	private IEnumerable<Vector2I> GetOccupiedTiles()
 	{
 		// Get all the buildings that have been currently placed in the game world
@@ -255,11 +280,12 @@ public partial class GridManager : Node
 		result.Add(rootTileMapLayer);
 		return result;
 	}
-	
+
 	// Event handler: Automatically updates the grid's buildable areas when a 
 	// new building is placed
 	private void OnBuildingPlaced(BuildingComponent buildingComponent)
 	{
 		UpdateValidBuildableTiles(buildingComponent);
+		UpdateCollectedResourceTiles(buildingComponent);
 	}
 }
