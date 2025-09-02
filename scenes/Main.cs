@@ -83,9 +83,12 @@ public partial class Main : Node
 		{
 			// Remember which grid cell we're now hovering over
 			hoveredGridCell = gridPosition;
+			gridManager.ClearHighlightedTiles();
 			// GREEN tiles - expansion preview when hovering
 			gridManager.HighlightExpandableBuildableTiles(hoveredGridCell.Value,
 				toPlaceBuildingResource.BuildableRadius);
+			gridManager.HighlightResourceTiles(hoveredGridCell.Value,
+				toPlaceBuildingResource.ResourceRadius);
 		}
 	}
 

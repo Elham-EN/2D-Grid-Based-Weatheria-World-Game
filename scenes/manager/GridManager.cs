@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game.Component;
@@ -11,6 +12,8 @@ namespace Game.Manager;
 /// </summary>
 public partial class GridManager : Node
 {
+	private const string IS_BUILDABLE = "is_buildable";
+	private const string IS_WOOD = "is_wood";
 	// Cached buildable tiles system that maintains a running list of valid tiles
 	// That always knows exactly which grid positions allow new building placement
 	private HashSet<Vector2I> validBuildableTiles = new HashSet<Vector2I>();
@@ -46,22 +49,24 @@ public partial class GridManager : Node
 	}
 
 	
-	// Checks if a position is valid for building by examining layers from most 
-	// visible to least visible. Trees on top override buildable sand underneath 
-	// - only the topmost visible tile matters.
-	public bool IsTilePositionValid(Vector2I tilePosition)
+	/// <summary>
+	/// Checks if a tile has specific custom data by examining layers from top 
+	/// to bottom. Uses depth-first search to find what the player actually sees 
+	/// (trees override sand underneath).
+	/// </summary>
+	public bool TileHasCustomData(Vector2I tilePosition, string dataName)
 	{
-		// Check each layer in visibility order (topmost first)
+		// Check each tilemap layer starting with the most visible (trees)
 		foreach (var layer in allTileMapLayers)
 		{
-			// Get tile data at this position on current layer
+			 // Get tile information at this position on the current layer
 			var customData = layer.GetCellTileData(tilePosition);
-			// No tile on this layer - check the layer beneath it
+			// No tile exists on this layer - check the next layer down
 			if (customData == null) continue;
-			 // Found a tile! Return its buildable status (trees = false, sand = true)
-			return (bool)customData.GetCustomData("buildable");
+			// Found a tile! Return its custom data value (buildable, wood, etc.)
+			return (bool)customData.GetCustomData(dataName);
 		}
-		// No tiles found on any layer - not buildable
+		// No tiles found on any layer - return false by default
 		return false;
 	}
 
@@ -85,16 +90,32 @@ public partial class GridManager : Node
 		}
 	}
 
+	/// <summary>
+	/// Shows green highlight tiles around a village to indicate which trees 
+	/// can be harvested.
+	/// </summary>
+	public void HighlightResourceTiles(Vector2I rootCell, int radius)
+	{
+		// Find all wood tiles within the village's harvesting range
+		var resourceTiles = GetResourceTilesInRadius(rootCell, radius);
+		// Set up green highlight color (Green Tile)
+		var atlasCoords = new Vector2I(1, 0);
+		// Draw green highlight on each tree tile that can be harvested
+		foreach (var tilePosition in resourceTiles)
+		{
+			// Place green highlight tile at this position to show it's harvestable
+			highlightTileMapLayer.SetCell(tilePosition, 0, atlasCoords);
+		}
+	}
+
 	// Shows expansion preview: green tiles for new buildable areas when placing a building
 	public void HighlightExpandableBuildableTiles(Vector2I rootcell, int radius)
 	{
-		// Clear old visuals and redraw current buildable areas as white tiles
-		ClearHighlightedTiles();
 		// Draw existing white tiles first
 		HighlightBuildableTiles();
 		// Get all tiles within radius that have valid terrain
 		var validTiles = GetValidTilesInRadius(rootcell, radius).ToHashSet();
-		 // Show only NEW expansion - exclude already buildable AND occupied tiles
+		// Show only NEW expansion - exclude already buildable AND occupied tiles
 		var expandedTiles = validTiles.Except(validBuildableTiles).Except(GetOccupiedTiles());
 		// Draw green tiles to show new areas that will become buildable
 		var atlasCoords = new Vector2I(1, 0);
@@ -142,23 +163,68 @@ public partial class GridManager : Node
 		return occupiedTiles;
 	}
 
-	// Iterates through all grid positions within that radius
-	private List<Vector2I> GetValidTilesInRadius(Vector2I rootCell, int radius)
+	/// <summary>
+	/// Generic method that finds all tiles (grid cell position) within a square radius 
+	/// that pass a custom filter test. This method accepts a function as a parameter 
+	/// & takes a Vector2I and returns a bool
+	/// </summary>
+	/// <param name="rootCell">Center position to search around</param>
+	/// <param name="radius">Distance in tiles to search in all directions </param>
+	/// <param name="filterFn">Function that determines which tiles to include</param>
+	/// <returns>List of tile positions that passed the filter test</returns>
+	private List<Vector2I> GetTilesInRadius(Vector2I rootCell, int radius,
+		Func<Vector2I, bool> filterFn)
 	{
+		// Initialize empty collection to store tiles that pass the filter test
 		var result = new List<Vector2I>();
+		// Loop through X coordinates from left to right of search area
 		for (var x = rootCell.X - radius; x <= rootCell.X + radius; x++)
 		{
+			// Loop through Y coordinates from top to bottom of search area
 			for (var y = rootCell.Y - radius; y <= rootCell.Y + radius; y++)
 			{
+				// Create tile position from current loop coordinates
 				var tilePosition = new Vector2I(x, y);
-				// Skip tiles with unsuitable terrain (water, rocks) - only check 
-				// buildable ground types
-				if (!IsTilePositionValid(tilePosition)) continue;
-				// Only add buildable tile to the list
+				// If filter returns false, skip this tile and continue to next 
+				// iteration
+				if (!filterFn(tilePosition)) continue;
+				// Filter test passed - add this tile position to results collection
 				result.Add(tilePosition);
 			}
 		}
+		// Return all tiles that passed the filter
 		return result;
+	}
+
+	/// <summary>
+	/// Finds all buildable tiles within the specified radius using the generic tile 
+	/// search method. Filters for tiles marked with IS_BUILDABLE custom data.
+	/// </summary>
+	/// <param name="rootCell">Center position to search from</param>
+	/// <param name="radius">Search distance in tiles</param>
+	/// <returns>List of buildable tile positions</returns>
+	private List<Vector2I> GetValidTilesInRadius(Vector2I rootCell, int radius)
+	{
+		return GetTilesInRadius(rootCell, radius, (tilePosition) =>
+		{
+			// Return true only if this tile has IS_BUILDABLE custom data
+			return TileHasCustomData(tilePosition, IS_BUILDABLE);
+		});
+	}
+
+	/// <summary>
+	/// Finds all wood resource tiles within the specified radius for village harvesting.
+	/// Uses the same generic search pattern but filters specifically for wood resources.
+	/// </summary>
+	/// <param name="rootCell">Village position to search from</param>
+	/// <param name="radius">Harvesting range in tiles</param>
+	/// <returns>List of harvestable wood tile positions</returns>
+	private List<Vector2I> GetResourceTilesInRadius(Vector2I rootCell, int radius)
+	{
+		return GetTilesInRadius(rootCell, radius, (tilePosition) =>
+		{
+			return TileHasCustomData(tilePosition, IS_WOOD);
+		});
 	}
 
 
